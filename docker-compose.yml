@@ -1,0 +1,66 @@
+services:
+  # App con Swagger
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: beos_app
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - postgres
+      - rabbitmq
+    networks:
+      - beos_network
+
+  # Worker para procesar la auditoría
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: beos_worker
+    command: php artisan queue:work rabbitmq
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - app
+      - rabbitmq
+    networks:
+      - beos_network
+
+  # PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: beos_postgres
+    environment:
+      POSTGRES_DB: beos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: beos23414411
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - beos_network
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: beos_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - beos_network
+
+networks:
+  beos_network:
+    driver: bridge
+
+volumes:
+  pgdata:
